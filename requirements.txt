@@ -1,0 +1,7 @@
+simplekml
+numpy
+Pillow
+opencv-python
+exifread
+flask
+joblib
