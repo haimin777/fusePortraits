@@ -8,7 +8,28 @@
    <div class="container">
       <div class="header">
         <h3 class="text-muted">Latents representation successfully created</h3>
+          		<table  style="background-color:blue;" border = 2 cellpadding="5">
+        	<tr>
+			<td align="center">
+				{{chart1_plot}}
+			</td>
+		</tr>
+            <tr><td align="center">
+			<form action="{{ url_for('index')}}">
+				<button class="btn btn-default" type="submit" name="submit" style="width: 50%; height: 30px;" value="Back">Back</button>
+				<link rel="stylesheet" href="/static/style.css" type="text/css">
+			</form>
+
+             <form action="{{ url_for('return_files_tut')}}">
+				<button class="btn btn-default" type="submit" name="submit" style="width: 70%; height: 30px;" value="Download">GENERATE</button>
+				<link rel="stylesheet" href="/static/style.css" type="text/css">
+
+             </form>
+		</td>
+		</tr>
+
       </div>
+
    </div>
 
 </body>

@@ -1,16 +1,24 @@
 import os, io, base64
-
+import shutil as sh
 import time
-import simplekml
+#import simplekml
 
 import matplotlib.pyplot as plt
 
 import numpy as np
 from PIL import Image
 import cv2
-
-import exifread
-import joblib
+import matplotlib.pyplot as plt
+import sys
+sys.path.insert(0,'/home/bizon/CBIS-DDSM/other/fuse_face_flask/stylegan-encoder')
+import glob
+import pickle
+import PIL.Image
+import numpy as np
+import dnnlib
+import dnnlib.tflib as tflib
+import config
+from encoder.generator_model import Generator
 
 
 
@@ -23,7 +31,10 @@ def allowed_file(filename):
 
 def clear_downloads(folder):
     for file in os.listdir(folder):
-        os.remove(os.path.join(folder, file))
+        try:
+            os.remove(os.path.join(folder, file))
+        except:
+            sh.rmtree(os.path.join(folder, file))
     print('uploads cleared')
 
 def read_img(path):
@@ -38,44 +49,6 @@ def _get_if_exist(data, key):
     return None
 
 
-def _convert_to_degress(value):
-    """
-    Helper function to convert the GPS coordinates stored in the EXIF to degress in float format
-    :param value:
-    :type value: exifread.utils.Ratio
-    :rtype: float
-    """
-    d = float(value.values[0].num) / float(value.values[0].den)
-    m = float(value.values[1].num) / float(value.values[1].den)
-    s = float(value.values[2].num) / float(value.values[2].den)
-
-    return d + (m / 60.0) + (s / 3600.0)
-
-
-def get_exif_location(exif_data):
-
-
-    """
-    Returns the latitude and longitude, if available, from the provided exif_data (obtained through get_exif_data above)
-    """
-    lat = None
-    lon = None
-
-    gps_latitude = _get_if_exist(exif_data, 'GPS GPSLatitude')
-    gps_latitude_ref = _get_if_exist(exif_data, 'GPS GPSLatitudeRef')
-    gps_longitude = _get_if_exist(exif_data, 'GPS GPSLongitude')
-    gps_longitude_ref = _get_if_exist(exif_data, 'GPS GPSLongitudeRef')
-
-    if gps_latitude and gps_latitude_ref and gps_longitude and gps_longitude_ref:
-        lat = _convert_to_degress(gps_latitude)
-        if gps_latitude_ref.values[0] != 'N':
-            lat = 0 - lat
-
-        lon = _convert_to_degress(gps_longitude)
-        if gps_longitude_ref.values[0] != 'E':
-            lon = 0 - lon
-
-    return lat, lon
 
 
 def one_histogram(path, bins):
@@ -93,25 +66,43 @@ def get_results(path_to_image, classifier):
 
     return coordinates, predict
 
-def create_coords(app, remove_image=True):
-    coords = []
-    clf = joblib.load('drone_clf.pkl')
-    for file in os.listdir(app.config['UPLOAD_FOLDER']):
-        img_path = os.path.join(app.config['UPLOAD_FOLDER'], file)
-        coords.append(get_results(img_path, clf))
-        if remove_image:
-            os.remove(img_path)
-
-    return coords
 
 def encode_images(align_fold='aligned_images', gen_fold='generated_images/', latent_fold='latent_representations/'):
 
     #time.sleep(15)
-    clear_downloads(align_fold)
-    os.system('python stylegan-encoder/align_images.py ./uploads aligned_images/')
-    os.system('python stylegan-encoder/encode_images.py aligned_images/ generated_images/ latent_representations/')
+    clear_downloads('/home/bizon/CBIS-DDSM/other/fuse_face_flask/stylegan-encoder/aligned_images')
+    clear_downloads('/home/bizon/CBIS-DDSM/other/fuse_face_flask/stylegan-encoder/generated_images')
+    clear_downloads('/home/bizon/CBIS-DDSM/other/fuse_face_flask/stylegan-encoder/latent_representations')
+    
+    os.chdir('stylegan-encoder')
+    os.system('python align_images.py /home/bizon/CBIS-DDSM/other/fuse_face_flask/uploads aligned_images/')
+    os.system('python encode_images.py aligned_images/ generated_images/ latent_representations/ --iterations 200')
 
     print('latents created!', '\n'*2)
+    
+    
+    
+def generate_image(latent_vector):
+    os.chdir('/home/bizon/CBIS-DDSM/other/fuse_face_flask/stylegan-encoder')
+    print('dir changed')
+
+    #################################
+        # init generator #
+    URL_FFHQ = 'https://drive.google.com/uc?id=1MEGjdvVpUsu1jB4zrXZN7Y4kBBOzizDQ'
+    tflib.init_tf()
+    with dnnlib.util.open_url(URL_FFHQ, cache_dir=config.cache_dir) as f:
+        generator_network, discriminator_network, Gs_network = pickle.load(f)
+
+    generator = Generator(Gs_network, batch_size=1, randomize_noise=False)
+    #################################
+
+    os.chdir('/home/bizon/CBIS-DDSM/other/fuse_face_flask')
+    latent_vector = latent_vector.reshape((1, 18, 512))
+    generator.set_dlatents(latent_vector)
+    img_array = generator.generate_images()[0]
+    img = PIL.Image.fromarray(img_array, 'RGB')
+    return img.resize((256, 256))
+
 
 
 
@@ -159,6 +150,18 @@ def create_chartplot_url(coords):
     labels_y[-2] = round(y[-1], 4)
     ax.set_yticklabels(labels_y)
 
+    img = io.BytesIO()
+    plt.savefig(img, format='png')
+    img.seek(0)
+    return base64.b64encode(img.getvalue()).decode()  # return plot_url
+
+
+def create_portret_url(gen_img):
+   
+    fig, ax = plt.subplots()
+    ax.imshow(gen_img)
+    plt.suptitle('generated photo')
+    
     img = io.BytesIO()
     plt.savefig(img, format='png')
     img.seek(0)

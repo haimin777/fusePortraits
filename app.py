@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import os, io, base64
 # We'll render HTML templates and access data sent by POST
 # using the request object from flask. Redirect and url_for
@@ -6,7 +8,7 @@ import os, io, base64
 # browser the file that the user just uploaded
 from flask import Flask, render_template, request, redirect, url_for, send_from_directory, Markup, send_file
 from werkzeug import secure_filename
-import simplekml
+#import simplekml
 
 
 from utils import *
@@ -20,8 +22,8 @@ import glob
 import matplotlib.pyplot as plt
 import cv2
 
-import exifread
-import joblib
+#import exifread
+#import joblib
 
 # Initialize the Flask application
 app = Flask(__name__)
@@ -56,7 +58,7 @@ def index():
 @app.route('/upload', methods=['POST'])
 def upload():
 
-    clear_downloads('uploads')
+    clear_downloads('/home/bizon/CBIS-DDSM/other/fuse_face_flask/uploads')
 
     # Get the name of the uploaded files
     uploaded_files = request.files.getlist("file[]")
@@ -108,16 +110,29 @@ def uploaded_file(filename):
 @app.route('/downloads/')
 def return_files_tut():
     try:
+        latents_path = glob.glob('/home/bizon/CBIS-DDSM/other/fuse_face_flask/stylegan-encoder/latent_representations/*.npy')
 
+
+        latents = np.load(latents_path[0])
+        latents_d = np.load(latents_path[1])
+        latents+=latents_d
+        latents = latents/2
+        gen_img = generate_image(latents)
         print('start sending!', '\n'*2)
-        return send_file('downloads/polygon_0.kml')
+        #return send_file('downloads/polygon_0.kml')
+        chart_plot = Markup(
+        '<img style="padding:1px; border:1px solid #021a40; width: 100%; height: 100%" src="data:image/png;base64,{}">'.format(
+            create_portret_url(gen_img)))
+        return render_template('uploaded.html', title='Home', chart1_plot=chart_plot)
+
     except Exception as e:
         return str(e)
 
 
 if __name__ == '__main__':
     app.run(
-        host="127.0.0.1",
+        #host="127.0.0.1",
+        host="0.0.0.0",        
         port=int("5000"),
         debug=True
 )
