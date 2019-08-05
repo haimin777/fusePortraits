@@ -61,27 +61,22 @@ def upload():
     clear_downloads('/home/bizon/CBIS-DDSM/other/fuse_face_flask/uploads')
 
     # Get the name of the uploaded files
-    uploaded_files = request.files.getlist("file[]")
-    filenames = []
-    for file in uploaded_files:
-        # Check if the file is one of the allowed types/extensions
-        if file and allowed_file(file.filename):
-            # Make the filename safe, remove unsupported chars
-            filename = secure_filename(file.filename)
-            # Move the file form the temporal folder to the upload
-            # folder we setup
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            # Save the filename into a list, we'll use it later
-            filenames.append(filename)
-            # Redirect the user to the uploaded_file route, which
-            # will basicaly show on the browser the uploaded file
-    # Load an html page with a link to each uploaded file
+    # Get the name of the uploaded file
+    file = request.files['file']
+    # Check if the file is one of the allowed types/extensions
+    if file and allowed_file(file.filename):
+        # Make the filename safe, remove unsupported chars
+        filename = secure_filename(file.filename)
+        # Move the file form the temporal folder to
+        # the upload folder we setup
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        # Redirect the user to the uploaded_file route, which
+        # will basicaly show on the browser the uploaded file
+        print(filename)
+        # testcv.image_make(filename)
 
-
-    #return render_template('upload.html', filenames=filenames)
-
-    return redirect(url_for('uploaded_file',
-                            filename=filename))
+        # return redirect(url_for('uploaded_file', filename=filename))
+        return render_template('second_download.html')
 
 # This route is expecting a parameter containing the name
 # of a file. Then it will locate that file on the upload
@@ -89,7 +84,9 @@ def upload():
 # an image, that image is going to be show after the upload
 
 
-@app.route('/uploads/<filename>')
+#@app.route('/uploads/<filename>')
+@app.route('/preprocess_images', methods=['POST'])
+
 def uploaded_file(filename):
     render_template('encode_images.html')
     #coords = create_coords(app)
