@@ -8,7 +8,7 @@ Normal Text
   <a href="#">Link 2</a> |
   <a href="#">Link 3</a>
   <br><br>
-  <img src="http://s.4cdn.org/image/title/105.gif">
+  <img src="https://github.com/haimin777/fusePortraits/blob/master/output_7qPwHP.gif">
 </p>
 
 Normal text
